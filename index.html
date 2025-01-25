@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Español - Cartulina</title>
+
+  <!-- Fuente de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap">
+
+  <style>
+    :root {
+      --color-texto: #333;
+      --color-marcado: #CEEAD6;
+      --color-fondo-vacio: #FFD6A5;
+      --border-radius: 0.5rem;
+      --transition-fast: 0.2s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    body {
+      background: var(--color-texto);
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #bingo-container {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 100vw;
+      height: 100vh;
+      gap: 0.5rem;
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: var(--border-radius);
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--color-texto);
+      cursor: pointer;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .cell:hover {
+      transform: scale(1.03);
+    }
+
+    .empty {
+      background: var(--color-fondo-vacio);
+      pointer-events: none;
+    }
+
+    .marked {
+      background: var(--color-marcado);
+      text-decoration: line-through;
+      color: var(--color-texto);
+    }
+
+    #message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4rem;
+      font-weight: bold;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #message.show {
+      opacity: 1;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    @media (orientation: portrait) {
+      #bingo-container {
+        grid-template-rows: repeat(3, 1fr);
+        grid-template-columns: repeat(9, 1fr);
+        width: 100vw;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="bingo-container"></div>
+  <div id="message"></div>
+  <canvas id="confetti-canvas"></canvas>
+
+  <script>
+    const bingoContainer = document.getElementById('bingo-container');
+    const messageDiv = document.getElementById('message');
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const ctx = confettiCanvas.getContext('2d');
+    let lineaMostrada = false;
+
+    function resizeCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function generarCarton() {
+      const carton = [];
+      const columnas = [];
+
+      for (let i = 0; i < 9; i++) {
+        const min = i * 10 + 1;
+        const max = i === 8 ? 90 : min + 9;
+        const columna = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+        columnas.push(columna.sort(() => Math.random() - 0.5));
+      }
+
+      for (let fila = 0; fila < 3; fila++) {
+        const filaCarton = [];
+        const indicesUsados = [];
+
+        while (indicesUsados.length < 5) {
+          const indice = Math.floor(Math.random() * 9);
+          if (!indicesUsados.includes(indice) && columnas[indice].length > 0) {
+            filaCarton[indice] = columnas[indice].pop();
+            indicesUsados.push(indice);
+          }
+        }
+
+        for (let i = 0; i < 9; i++) {
+          if (!filaCarton[i]) filaCarton[i] = null;
+        }
+
+        carton.push(filaCarton);
+      }
+
+      return carton;
+    }
+
+    function pintarCarton(carton) {
+      const randomColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 80%)`;
+      document.documentElement.style.setProperty('--color-fondo-vacio', randomColor);
+
+      bingoContainer.innerHTML = '';
+      carton.forEach(fila => {
+        fila.forEach(numero => {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          if (numero === null) {
+            cell.classList.add('empty');
+          } else {
+            cell.textContent = numero;
+            cell.addEventListener('click', () => {
+              cell.classList.toggle('marked');
+              verificarLineaYBingo();
+            });
+          }
+          bingoContainer.appendChild(cell);
+        });
+      });
+    }
+
+    function mostrarMensaje(tipo) {
+      messageDiv.textContent = tipo === 'linea' ? '¡LÍNEA!' : '¡BINGO!';
+      messageDiv.classList.add('show');
+
+      if (tipo === 'bingo') lanzarConfeti();
+
+      setTimeout(() => {
+        messageDiv.classList.remove('show');
+      }, 3000);
+    }
+
+    function verificarLineaYBingo() {
+      const rows = Array.from(document.querySelectorAll('#bingo-container .cell')).reduce((acc, cell, index) => {
+        const rowIndex = Math.floor(index / 9);
+        if (!acc[rowIndex]) acc[rowIndex] = [];
+        acc[rowIndex].push(cell);
+        return acc;
+      }, []);
+
+      if (!lineaMostrada) {
+        rows.forEach(row => {
+          const marcados = row.filter(cell => cell.classList.contains('marked')).length;
+          if (marcados === 5 && !lineaMostrada) {
+            lineaMostrada = true;
+            mostrarMensaje('linea');
+          }
+        });
+      }
+
+      const totalMarcados = rows.flat().filter(cell => cell.classList.contains('marked')).length;
+      const totalCeldas = rows.flat().filter(cell => !cell.classList.contains('empty')).length;
+
+      if (totalMarcados === totalCeldas) mostrarMensaje('bingo');
+    }
+
+    function lanzarConfeti() {
+      const confettiPieces = [];
+
+      for (let i = 0; i < 200; i++) {
+        confettiPieces.push({
+          x: Math.random() * confettiCanvas.width,
+          y: Math.random() * confettiCanvas.height,
+          r: Math.random() * 6 + 4,
+          color: `hsl(${Math.random() * 360}, 70%, 80%)`,
+          speed: Math.random() * 2 + 1,
+          angle: Math.random() * Math.PI * 2,
+        });
+      }
+
+      function drawConfetti() {
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+        confettiPieces.forEach(p => {
+          p.y += p.speed;
+          if (p.y > confettiCanvas.height) p.y = -10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        });
+
+        requestAnimationFrame(drawConfetti);
+      }
+
+      drawConfetti();
+      setTimeout(() => ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height), 5000);
+    }
+
+    const carton = generarCarton();
+    pintarCarton(carton);
+  </script>
+</body>
+</html>
