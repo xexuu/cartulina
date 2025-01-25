@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Cartulina de Bingo Española</title>
   <style>
-    /* Reset de estilos básicos */
+    /* Reset básico */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -16,29 +16,30 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden; /* Sin scroll */
-      background-color: #f8f9fa; /* Fondo claro */
+      overflow: hidden; /* Impide cualquier scroll */
+      background-color: #f8f9fa;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
     }
 
-    /* Contenedor principal que centra la cartulina */
+    /* Contenedor principal para centrar la cartulina */
     .bingo-wrapper {
-      width: 100%;
-      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1rem; /* Espaciado para evitar bordes pegados */
+      width: 50%; /* Márgenes laterales automáticos */
+      height: 50%; /* Márgenes verticales automáticos */
+      max-width: 100vw; /* Evita desbordes */
+      max-height: 100vh; /* Evita desbordes */
     }
 
     /* Contenedor de la cartulina */
     #bingo-container {
       display: grid;
       gap: 0.5rem;
-      background-color: white;
       padding: 1rem;
+      background-color: white;
       border-radius: 0.5rem;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
@@ -48,9 +49,9 @@
       #bingo-container {
         grid-template-columns: repeat(9, 1fr);
         grid-template-rows: repeat(3, 1fr);
-        aspect-ratio: 3; /* Relación de aspecto 3:1 */
-        max-width: 100vw;
-        max-height: 100vh;
+        aspect-ratio: 3; /* Proporción 3:1 */
+        height: 100%; /* Adapta al alto del wrapper */
+        width: auto; /* Calcula el ancho basado en la proporción */
       }
     }
 
@@ -59,9 +60,9 @@
       #bingo-container {
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(9, 1fr);
-        aspect-ratio: 0.3333; /* Relación de aspecto 1:3 */
-        max-width: 100vw;
-        max-height: 100vh;
+        aspect-ratio: 0.3333; /* Proporción 1:3 */
+        width: 100%; /* Adapta al ancho del wrapper */
+        height: auto; /* Calcula el alto basado en la proporción */
       }
     }
 
@@ -73,15 +74,14 @@
       background-color: #ffffff;
       border: 1px solid #dddddd;
       border-radius: 0.25rem;
-      font-size: 1.5rem;
+      font-size: calc(1vw + 1vh); /* Tamaño dinámico según la pantalla */
       font-weight: bold;
       color: #333333;
       transition: background-color 0.2s ease, transform 0.2s ease;
     }
 
-    /* Celdas vacías */
+    /* Celdas vacías con colores pastel aleatorios */
     .cell.empty {
-      background-color: #f2f2f2;
       border: none;
     }
 
@@ -144,6 +144,16 @@
     }
 
     /**
+     * Genera un color pastel aleatorio.
+     */
+    function colorPastelAleatorio() {
+      const hue = Math.floor(Math.random() * 360); // Tonalidad aleatoria
+      const saturation = 70 + Math.random() * 10; // Saturación entre 70-80%
+      const lightness = 85 + Math.random() * 5; // Luminosidad entre 85-90%
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    /**
      * Renderiza la cartulina en el contenedor #bingo-container.
      * @param {number[][]} carton - La cartulina generada.
      */
@@ -151,12 +161,16 @@
       const container = document.getElementById('bingo-container');
       container.innerHTML = ''; // Limpiamos el contenedor
 
+      // Color pastel único para las celdas vacías
+      const colorPastel = colorPastelAleatorio();
+
       carton.forEach(fila => {
         fila.forEach(numero => {
           const cell = document.createElement('div');
           cell.classList.add('cell');
           if (numero === null) {
             cell.classList.add('empty'); // Celda vacía
+            cell.style.backgroundColor = colorPastel; // Color pastel aleatorio
           } else {
             cell.textContent = numero;
             cell.addEventListener('click', () => {
