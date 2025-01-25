@@ -16,22 +16,45 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden; /* Impide cualquier scroll */
+      overflow: hidden; /* Sin scroll */
       background-color: #f8f9fa;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    /* Contenedor principal para centrar la cartulina */
+    /* Contenedor principal */
     .bingo-wrapper {
-      display: flex;
+      display: none; /* Por defecto ocultamos el bingo */
       align-items: center;
       justify-content: center;
-      width: 50%; /* Márgenes laterales automáticos */
-      height: 50%; /* Márgenes verticales automáticos */
-      max-width: 100vw; /* Evita desbordes */
-      max-height: 100vh; /* Evita desbordes */
+      width: 100%;
+      height: 100%;
+      padding: 2%; /* Añade márgenes alrededor */
+    }
+
+    /* Mensaje para la orientación vertical */
+    .rotate-message {
+      display: none; /* Por defecto, oculto */
+      width: 100%;
+      height: 100%;
+      background-color: #333;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .rotate-message h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .rotate-message p {
+      font-size: 1.2rem;
     }
 
     /* Contenedor de la cartulina */
@@ -44,25 +67,35 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    /* Landscape (horizontal): 9 columnas x 3 filas */
+    /* Landscape: 9 columnas x 3 filas */
     @media (orientation: landscape) {
+      .bingo-wrapper {
+        display: flex; /* Mostrar bingo en horizontal */
+      }
+
+      .rotate-message {
+        display: none; /* Ocultar mensaje en horizontal */
+      }
+
       #bingo-container {
         grid-template-columns: repeat(9, 1fr);
         grid-template-rows: repeat(3, 1fr);
-        aspect-ratio: 3; /* Proporción 3:1 */
-        height: 100%; /* Adapta al alto del wrapper */
-        width: auto; /* Calcula el ancho basado en la proporción */
+        aspect-ratio: 3; /* Relación 3:1 */
+        max-width: 100%; /* Asegura que no se desborde horizontalmente */
+        max-height: 100%; /* Asegura que no se desborde verticalmente */
+        width: 100%; /* Ocupa el ancho disponible */
+        height: auto; /* Ajusta la altura según la proporción */
       }
     }
 
-    /* Portrait (vertical): 3 columnas x 9 filas */
+    /* Portrait: mensaje para rotar */
     @media (orientation: portrait) {
-      #bingo-container {
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(9, 1fr);
-        aspect-ratio: 0.3333; /* Proporción 1:3 */
-        width: 100%; /* Adapta al ancho del wrapper */
-        height: auto; /* Calcula el alto basado en la proporción */
+      .bingo-wrapper {
+        display: none; /* Ocultar bingo en vertical */
+      }
+
+      .rotate-message {
+        display: flex; /* Mostrar mensaje */
       }
     }
 
@@ -99,8 +132,15 @@
   </style>
 </head>
 <body>
+  <!-- Contenedor principal -->
   <div class="bingo-wrapper">
     <div id="bingo-container"></div>
+  </div>
+
+  <!-- Mensaje para orientación vertical -->
+  <div class="rotate-message">
+    <h1>Por favor, gira tu dispositivo</h1>
+    <p>Esta página solo está disponible en formato horizontal.</p>
   </div>
 
   <script>
