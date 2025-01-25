@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- IMPORTANTE: viewport-fit=cover y la escala inicial -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Bingo Español - Cartulina</title>
 
   <!-- Fuente de Google Fonts -->
@@ -16,6 +17,12 @@
       --color-fondo-vacio: #FFD6A5;
       --border-radius: 0.5rem;
       --transition-fast: 0.2s ease;
+
+      /* Márgenes seguros en iOS (y otros navegadores móviles) */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
     * {
@@ -25,36 +32,62 @@
       font-family: 'Quicksand', sans-serif;
     }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
+      /* Retiramos overflow hidden del body
+         para que no recorte la vista en móviles */
+      overflow: visible; 
       background: var(--color-texto);
       color: var(--color-texto);
+    }
+
+    /* 
+     Para centrar y asegurarnos de que el bingo-container
+     se vea lo más grande posible pero conservando el aspecto
+     deseado en cada orientación.
+    */
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      overflow: hidden;
+      /* Opcional: un pequeño padding para que no se pegue a los bordes
+         Puedes tunearlo o usar env(safe-area-inset-*) si prefieres. */
+      padding: 1rem;
     }
 
+    /*
+      Ajustamos la rejilla en un elemento que SÍ tenga
+      un aspect-ratio forzado: 
+      - 9/3 = 3/1 en landscape
+      - 3/9 = 1/3 en portrait
+    */
     #bingo-container {
+      /* 
+       Modo por defecto (portrait): 3 columnas x 9 filas 
+       (lo "forzamos" en la media query de abajo para que se aplique
+        solo en portrait). 
+       En landscape invertiremos.
+      */
       display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      grid-template-rows: repeat(3, 1fr);
       width: 100%;
-      height: 100%;
+      height: auto;  /* Dejamos que lo controle aspect-ratio */
       gap: 0.5rem;
     }
 
+    /* Estilos de las celdas */
     .cell {
       display: flex;
       align-items: center;
       justify-content: center;
       background: white;
       border-radius: var(--border-radius);
-      font-size: calc(1.5vw + 1.5vh);
       font-weight: bold;
       color: var(--color-texto);
       cursor: pointer;
       transition: background var(--transition-fast), transform var(--transition-fast);
+      /* Tamaño de la fuente adaptado al tamaño del contenedor */
+      font-size: calc(1.5vw + 1.5vh);
     }
 
     .cell:hover {
@@ -72,6 +105,7 @@
       color: var(--color-texto);
     }
 
+    /* Mensaje flotante */
     #message {
       position: fixed;
       top: 50%;
@@ -101,6 +135,7 @@
       }
     }
 
+    /* Confeti en pantalla completa */
     #confetti-canvas {
       position: fixed;
       top: 0;
@@ -111,18 +146,28 @@
       z-index: 9;
     }
 
+    /* ORIENTACIÓN LANDSCAPE */
     @media (orientation: landscape) {
       #bingo-container {
-        grid-template-rows: repeat(3, minmax(0, 1fr));
+        /*
+          Queremos 9 columnas x 3 filas -> aspect-ratio 9/3 = 3, 
+          que es 3/1.
+        */
+        aspect-ratio: 3 / 1;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(3, 1fr);
       }
     }
 
+    /* ORIENTACIÓN PORTRAIT */
     @media (orientation: portrait) {
       #bingo-container {
+        /*
+          Queremos 3 columnas x 9 filas -> aspect-ratio 3/9 = 1/3.
+        */
+        aspect-ratio: 1 / 3;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(9, 1fr);
-        width: 100%;
-        height: 100%;
       }
     }
   </style>
@@ -154,6 +199,7 @@
 
       for (let i = 0; i < 9; i++) {
         const min = i * 10 + 1;
+        // la última columna (i=8) llega hasta 90
         const max = i === 8 ? 90 : min + 9;
         const columna = Array.from({ length: max - min + 1 }, (_, index) => min + index);
         columnas.push(columna.sort(() => Math.random() - 0.5));
@@ -182,6 +228,7 @@
     }
 
     function pintarCarton(carton) {
+      // Color aleatorio para las casillas "vacías"
       const randomColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 80%)`;
       document.documentElement.style.setProperty('--color-fondo-vacio', randomColor);
 
@@ -216,16 +263,22 @@
     }
 
     function verificarLineaYBingo() {
-      const rows = Array.from(document.querySelectorAll('#bingo-container .cell')).reduce((acc, cell, index) => {
-        const rowIndex = Math.floor(index / 9);
-        if (!acc[rowIndex]) acc[rowIndex] = [];
-        acc[rowIndex].push(cell);
-        return acc;
-      }, []);
+      // Tomamos las celdas en filas de 9
+      const celdas = Array.from(document.querySelectorAll('#bingo-container .cell'));
+      // Dependiendo de la orientación en pantalla, 
+      // el cartón real son 3 filas x 9 col, 
+      // pero con grid las celdas se distribuyen igual. 
+      // Lo más fácil: chequeamos por 'filas' reales de 9.
+      const rows = [];
+      for (let i = 0; i < celdas.length; i += 9) {
+        rows.push(celdas.slice(i, i + 9));
+      }
 
+      // Chequeo de línea
       if (!lineaMostrada) {
         rows.forEach(row => {
           const marcados = row.filter(cell => cell.classList.contains('marked')).length;
+          // si hay exactamente 5 marcados en una fila
           if (marcados === 5 && !lineaMostrada) {
             lineaMostrada = true;
             mostrarMensaje('linea');
@@ -233,8 +286,9 @@
         });
       }
 
-      const totalMarcados = rows.flat().filter(cell => cell.classList.contains('marked')).length;
-      const totalCeldas = rows.flat().filter(cell => !cell.classList.contains('empty')).length;
+      // Chequeo de bingo (todas las celdas no vacías marcadas)
+      const totalMarcados = celdas.filter(cell => cell.classList.contains('marked')).length;
+      const totalCeldas = celdas.filter(cell => !cell.classList.contains('empty')).length;
 
       if (totalMarcados === totalCeldas && !bingoMostrado) {
         bingoMostrado = true;
@@ -261,6 +315,7 @@
 
         confettiPieces.forEach(p => {
           p.y += p.speed;
+          // Si se sale de la pantalla, reseteamos arriba
           if (p.y > confettiCanvas.height) p.y = -10;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
